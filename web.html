@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الصلات الرياضية</title>
+    <style>
+        :root {
+            --main-bg-color: #f5f5f5;
+            --main-color: #4a90e2;
+            --secondary-color: #5cb85c;
+            --button-color: #d9534f;
+            --text-color: #333;
+            --border-color: #ddd;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--main-bg-color);
+            margin: 0;
+            padding: 0;
+            direction: rtl;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--main-color);
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            margin: 40px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: var(--box-shadow);
+            transition: transform 0.3s;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        label {
+            color: var(--text-color);
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="number"] {
+            width: calc(100% - 20px);
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="number"]:focus {
+            border-color: var(--main-color);
+            outline: none;
+        }
+
+        button {
+            background-color: var(--button-color);
+            color: #fff;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s, transform 0.3s;
+            font-weight: bold;
+            box-shadow: var(--box-shadow);
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #c9302c;
+            transform: translateY(-3px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+            box-shadow: var(--box-shadow);
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        th {
+            background-color: var(--main-color);
+            color: #fff;
+        }
+
+        td {
+            background-color: #f9f9f9;
+            transition: background-color 0.3s;
+        }
+
+        td:hover {
+            background-color: #f1f1f1;
+        }
+
+        #search {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px; 
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>إدارة الصلات الرياضية</h1>
+
+        <form id="add-relation-form">
+            <label for="name">الاسم:</label>
+            <input type="text" id="name" required>
+
+            <label for="phone">رقم الهاتف:</label>
+            <input type="text" id="phone" required>
+
+            <label for="date">التاريخ:</label>
+            <input type="date" id="date" required>
+
+            <label for="subscription">دفع الاشتراك:</label>
+            <input type="number" id="subscription" required>
+
+            <label for="attendance">باقي دفع الاشتراك:</label>
+            <input type="number" id="attendance" required>
+
+            <button type="submit" id="add-btn">اضافه</button>
+        </form>
+
+        <input type="text" id="search" placeholder="ابحث عن اسم...">
+
+        <table id="relations-table">
+            <thead>
+                <tr>
+                    <th>الاسم</th>
+                    <th>رقم الهاتف</th>
+                    <th>التاريخ</th>
+                    <th>دفع الاشتراك</th>
+                    <th>باقي دفع الاشتراك</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody id="relations-tbody"></tbody>
+        </table>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.5/dayjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.5/locale/ar.js"></script>
+
+    <script>
+        dayjs.locale('ar');
+
+        const addRelationForm = document.getElementById('add-relation-form');
+        const relationsTbody = document.getElementById('relations-tbody');
+        const searchInput = document.getElementById('search');
+        const addBtn = document.getElementById('add-btn');
+
+        let relations = [];
+        let editIndex = null;
+
+        function loadFromLocalStorage() {
+            const savedRelations = JSON.parse(localStorage.getItem('relations'));
+            if (savedRelations) {
+                relations = savedRelations;
+                updateRelationsTable();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('relations', JSON.stringify(relations));
+        }
+
+        addRelationForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const date = document.getElementById('date').value.trim();
+            const formattedDate = dayjs(date).format('D MMMM YYYY');
+            const subscription = parseInt(document.getElementById('subscription').value);
+            const attendance = parseInt(document.getElementById('attendance').value);
+
+            if (!name || !phone || !date || isNaN(subscription) || isNaN(attendance)) return;
+
+            const relation = { name, phone, date: formattedDate, subscription, attendance };
+
+            if (editIndex === null) {
+                relations.push(relation);
+            } else {
+                relations[editIndex] = relation;
+                editIndex = null; 
+                addBtn.textContent = 'اضافه';
+            }
+
+            updateRelationsTable();
+            saveToLocalStorage(); 
+            addRelationForm.reset();
+        });
+
+        function updateRelationsTable(filteredRelations = relations) {
+            relationsTbody.innerHTML = '';
+
+            filteredRelations.forEach((relation, index) => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td>${relation.name}</td>
+                    <td>${relation.phone}</td>
+                    <td>${relation.date}</td>
+                    <td>${relation.subscription}</td>
+                    <td>${relation.attendance}</td>
+                    <td>
+                        <button onclick="editRelation(${index})">تعديل</button>
+                        <button onclick="deleteRelation(${index})">حذف</button>
+                    </td>
+                `;
+
+                relationsTbody.appendChild(row);
+            });
+        }
+
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filteredRelations = relations.filter(relation => 
+                relation.name.toLowerCase().includes(searchTerm)
+            );
+            updateRelationsTable(filteredRelations);
+        });
+
+        function editRelation(index) {
+            const relation = relations[index];
+            document.getElementById('name').value = relation.name;
+            document.getElementById('phone').value = relation.phone;
+            document.getElementById('date').value = dayjs(relation.date, 'D MMMM YYYY').format('YYYY-MM-DD');
+            document.getElementById('subscription').value = relation.subscription;
+            document.getElementById('attendance').value = relation.attendance;
+
+            editIndex = index; 
+            addBtn.textContent = 'تعديل';
+        }
+
+        function deleteRelation(index) {
+            if (confirm('هل أنت متأكد من حذف هذا العنصر؟')) {
+                relations.splice(index, 1);
+                updateRelationsTable();
+                saveToLocalStorage(); 
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadFromLocalStorage);
+    </script>
+</body>
+</html>
